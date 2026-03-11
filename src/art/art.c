@@ -2311,6 +2311,15 @@ size_t art_size_in_bytes(const art_t *art) {
     return size;
 }
 
+size_t art_memory_usage(const art_t *art) {
+    size_t size = 0;
+    for (art_typecode_t t = CROARING_ART_MIN_TYPE; t <= CROARING_ART_MAX_TYPE;
+         ++t) {
+        size += art->capacities[t] * ART_NODE_SIZES[t];
+    }
+    return size;
+}
+
 size_t art_serialize(const art_t *art, char *buf) {
     if (buf == NULL) {
         return 0;

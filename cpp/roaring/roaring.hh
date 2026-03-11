@@ -712,6 +712,14 @@ class Roaring {
     }
 
     /**
+     * Returns the memory in bytes currently used by this bitmap, including
+     * all heap-allocated container data and overhead arrays.
+     */
+    size_t getMemoryUsage() const noexcept {
+        return api::roaring_bitmap_memory_usage(&roaring);
+    }
+
+    /**
      * For advanced users.
      * This function may throw std::runtime_error.
      */

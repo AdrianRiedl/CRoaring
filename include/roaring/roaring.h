@@ -675,6 +675,12 @@ roaring_bitmap_t *roaring_bitmap_deserialize_safe(const void *buf,
 size_t roaring_bitmap_size_in_bytes(const roaring_bitmap_t *r);
 
 /**
+ * How many bytes does this bitmap currently use in memory, including all
+ * heap-allocated container data and overhead arrays.
+ */
+size_t roaring_bitmap_memory_usage(const roaring_bitmap_t *r);
+
+/**
  * Read bitmap from a serialized buffer.
  * In case of failure, NULL is returned.
  *

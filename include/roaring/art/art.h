@@ -217,6 +217,12 @@ bool art_is_shrunken(const art_t *art);
 size_t art_size_in_bytes(const art_t *art);
 
 /**
+ * Returns the memory in bytes used by the heap-allocated node arrays.
+ * Does not include sizeof(art_t) itself.
+ */
+size_t art_memory_usage(const art_t *art);
+
+/**
  * Serializes the ART and returns the number of bytes written. Returns 0 on
  * error. Requires `art_shrink_to_fit` to be called first.
  */

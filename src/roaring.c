@@ -1534,6 +1534,50 @@ size_t roaring_bitmap_size_in_bytes(const roaring_bitmap_t *r) {
                                       : (size_t)sizeasarray + 1;
 }
 
+size_t roaring_bitmap_memory_usage(const roaring_bitmap_t *r) {
+    const roaring_array_t *ra = &r->high_low_container;
+    // The bitmap struct itself (contains roaring_array_t inline).
+    size_t size = sizeof(roaring_bitmap_t);
+    // Frozen bitmaps are backed by an external buffer; only the struct itself
+    // is heap-allocated, so we cannot account for the rest.
+    if (ra->flags & ROARING_FLAG_FROZEN) {
+        return size;
+    }
+    // Three parallel arrays allocated at allocation_size capacity.
+    size += (size_t)ra->allocation_size *
+            (sizeof(container_t *) + sizeof(uint16_t) + sizeof(uint8_t));
+    for (int32_t i = 0; i < ra->size; i++) {
+        uint8_t typecode = ra->typecodes[i];
+        const container_t *c = ra->containers[i];
+        if (typecode == SHARED_CONTAINER_TYPE) {
+            // Count the shared_container_t wrapper itself.
+            size += sizeof(shared_container_t);
+            c = container_unwrap_shared(c, &typecode);
+        }
+        switch (typecode) {
+            case ARRAY_CONTAINER_TYPE: {
+                const array_container_t *ac = const_CAST_array(c);
+                size += sizeof(array_container_t) +
+                        (size_t)ac->capacity * sizeof(uint16_t);
+                break;
+            }
+            case BITSET_CONTAINER_TYPE:
+                size += sizeof(bitset_container_t) +
+                        BITSET_CONTAINER_SIZE_IN_WORDS * sizeof(uint64_t);
+                break;
+            case RUN_CONTAINER_TYPE: {
+                const run_container_t *rc = const_CAST_run(c);
+                size += sizeof(run_container_t) +
+                        (size_t)rc->capacity * sizeof(rle16_t);
+                break;
+            }
+            default:
+                break;
+        }
+    }
+    return size;
+}
+
 size_t roaring_bitmap_portable_size_in_bytes(const roaring_bitmap_t *r) {
     return ra_portable_size_in_bytes(&r->high_low_container);
 }

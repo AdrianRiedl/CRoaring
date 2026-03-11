@@ -565,6 +565,12 @@ static inline roaring64_bitmap_t *roaring64_bitmap_sub_offset(
 size_t roaring64_bitmap_portable_size_in_bytes(const roaring64_bitmap_t *r);
 
 /**
+ * How many bytes does this bitmap currently use in memory, including the ART
+ * index, the containers array, and all heap-allocated container data.
+ */
+size_t roaring64_bitmap_memory_usage(const roaring64_bitmap_t *r);
+
+/**
  * Write a bitmap to a buffer. The output buffer should refer to at least
  * `roaring64_bitmap_portable_size_in_bytes(r)` bytes of allocated memory.
  *

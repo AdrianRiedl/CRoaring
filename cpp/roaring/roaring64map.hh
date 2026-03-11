@@ -1257,6 +1257,28 @@ class Roaring64Map {
     }
 
     /**
+     * Returns the memory in bytes currently used by this bitmap. Counts the
+     * Roaring64Map wrapper, each std::map node's key+value storage, and all
+     * heap-allocated container data inside each inner Roaring bitmap.
+     *
+     * Note: std::map red-black tree pointer overhead (~24-32 bytes per node)
+     * is not included as it is implementation-specific.
+     */
+    size_t getMemoryUsage() const {
+        size_t size = sizeof(Roaring64Map);
+        for (const auto &entry : roarings) {
+            // std::map node stores key+value inline as std::pair.
+            size += sizeof(std::pair<const uint32_t, Roaring>);
+            // Add heap allocations of the inner bitmap (containers array +
+            // container data). Subtract sizeof(roaring_bitmap_t) because it
+            // is already accounted for as part of sizeof(Roaring) above.
+            size += entry.second.getMemoryUsage() -
+                    sizeof(api::roaring_bitmap_t);
+        }
+        return size;
+    }
+
+    /**
      * For advanced users only. This function is unsafe. You must ensure that
      * the provided buffer is 32-byte aligned.
      */

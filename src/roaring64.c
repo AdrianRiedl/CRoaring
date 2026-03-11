@@ -1098,6 +1098,50 @@ void roaring64_bitmap_statistics(const roaring64_bitmap_t *r,
     }
 }
 
+size_t roaring64_bitmap_memory_usage(const roaring64_bitmap_t *r) {
+    // The bitmap struct itself (contains art_t and containers pointer inline).
+    size_t size = sizeof(roaring64_bitmap_t);
+    // Frozen bitmaps are backed by an external buffer; only the struct and the
+    // containers pointer array are heap-owned. Container data is not counted.
+    if (is_frozen64(r)) {
+        size += r->capacity * sizeof(container_t *);
+        return size;
+    }
+    // Heap-allocated containers pointer array.
+    size += r->capacity * sizeof(container_t *);
+    // Heap-allocated ART node arrays (leaves, node4, node16, node48, node256).
+    size += art_memory_usage(&r->art);
+    // Actual container data.
+    art_iterator_t it = art_init_iterator((art_t *)&r->art, /*first=*/true);
+    while (it.value != NULL) {
+        leaf_t leaf = (leaf_t)*it.value;
+        uint8_t typecode = get_typecode(leaf);
+        const container_t *c = get_container(r, leaf);
+        switch (typecode) {
+            case ARRAY_CONTAINER_TYPE: {
+                const array_container_t *ac = const_CAST_array(c);
+                size += sizeof(array_container_t) +
+                        (size_t)ac->capacity * sizeof(uint16_t);
+                break;
+            }
+            case BITSET_CONTAINER_TYPE:
+                size += sizeof(bitset_container_t) +
+                        BITSET_CONTAINER_SIZE_IN_WORDS * sizeof(uint64_t);
+                break;
+            case RUN_CONTAINER_TYPE: {
+                const run_container_t *rc = const_CAST_run(c);
+                size += sizeof(run_container_t) +
+                        (size_t)rc->capacity * sizeof(rle16_t);
+                break;
+            }
+            default:
+                break;
+        }
+        art_iterator_next(&it);
+    }
+    return size;
+}
+
 static bool roaring64_leaf_internal_validate(const art_val_t val,
                                              const char **reason,
                                              void *context) {
